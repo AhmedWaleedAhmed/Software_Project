@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
-use App\user;
+use App\User;
 use Illuminate\Support\Facades\DB;
 use JWTAuth;
 use Validator;
@@ -19,12 +19,12 @@ use Crypt;
 /**
  * [2] The verification
  *      [1] I will use the same column for the token of the verification and reset password
- * 
+ *
  * [3] Guest
- *      [1] I will divide all function into 3 types and make the common type without middleware and return with every response a paramater determine if it is guest or user 
+ *      [1] I will divide all function into 3 types and make the common type without middleware and return with every response a paramater determine if it is guest or user
  */
 /**
- * @group User 
+ * @group User
  *
  * APIs for managing users (Sofyan)
  */
@@ -38,10 +38,11 @@ class userController extends Controller
     private $DefaultImage = "default.jpg";
     private $ForgotPasswordRoute = "api/checktoken?token=";
     private $VerifyRoute = "api/checktokenverify?token=";
-    private $ForgotPasswordRouteFront = "http://localhost:4200/#/forgetPassword?token=";
+    private $ForgotPasswordRouteFront = "http://ec2-52-90-5-77.compute-1.amazonaws.com/app/#/forgetPassword?token=";
+    //private $ForgotPasswordRouteFront ="http://localhost:4200/#/forgetPassword?token=";
     private $VerifyRouteFront="";
     private $TokenLife = 60*60;     // The life of the token
-    
+
     //
     /**
      * Sign Up
@@ -65,8 +66,8 @@ class userController extends Controller
      *}
      * @response 200{
      * "status": "true",
-     * "user": {   
-     *    "name": "", 
+     * "user": {
+     *    "name": "",
      *    "username": "",
      *    "image_link": ""
      *},
@@ -120,16 +121,17 @@ class userController extends Controller
                                     "name" ,
                                     "username" ,
                                     "image_link",
-                                    "verified"
+                                    "verified",
+                                    "id"
                                 );
             $show = User::find($user->id,$gettingdata);
             $show["image_link"] = asset($this->PublicUrl . $this->AvatarDirectory . $show["image_link"]);
             return response()->json(["user" => $show , "token" => $token , "token_type" => "bearer" , "expires_in" => auth()->factory()->getTTL() * 60],200);
-        } 
-        else 
+        }
+        else
         {
             return response()->json(["errors"=> $data->messages()->first()], 405);
-        } 
+        }
     }
 
 
@@ -138,13 +140,13 @@ class userController extends Controller
     /**
      * @group [User].Login
      * logIn function
-     * 
+     *
      * Take the request has [email , password] and check that the email is email type and exists in database and also the password
-     * 
-     * if all is correct return a response with status 200 and json file has [name , username , image_link] 
-     * 
+     *
+     * if all is correct return a response with status 200 and json file has [name , username , image_link]
+     *
      * if there are any errors, return a response with status 405 has the message describe the error
-     * 
+     *
      * @bodyParam email string required .
      * @bodyParam password string required .
      * @response 405 {
@@ -158,8 +160,8 @@ class userController extends Controller
      *}
      * @response 200{
      * "status": "true",
-     * "user": {   
-     *    "name": "", 
+     * "user": {
+     *    "name": "",
      *    "username": "",
      *    "image_link": ""
      *},
@@ -194,7 +196,8 @@ class userController extends Controller
                                         "name" ,
                                         "username" ,
                                         "image_link",
-                                        "verified"
+                                        "verified",
+                                        "id"
                                     );
                 $user = User::where("email" , $request["email"])->first();
                 $show = User::find($user->id,$gettingdata);
@@ -245,13 +248,12 @@ class userController extends Controller
     public function showSetting(Request $request)
     {
         $gettingData = array
-                            (   
+                            (
                                 "id",
                                 "name",
                                 "username",
                                 "email",
                                 "email_verified_at",
-                                "password",
                                 "link",
                                 "image_link",
                                 "small_image_link",
@@ -281,16 +283,16 @@ class userController extends Controller
     /**
      * @group [User].Logout
      * logOut function
-     * 
-     * Take the request has [Authorization] in the header and this paramater is checked in middleware 
-     * 
+     *
+     * Take the request has [Authorization] in the header and this paramater is checked in middleware
+     *
      * if it valid one the function return it into invalid and return response with status 200 with message [you have logged out]
-     * 
+     *
      * if this [Authorization] is invalid the middleware return a response with status 405 has a message [UnAuthorized].
-     * 
+     *
      * @authenticated
-     * 
-     * 
+     *
+     *
      * @response 200{
      * "message": "You have logged out"
      *}
@@ -415,7 +417,7 @@ class userController extends Controller
         {
             return response()->json(["errors"=> $valid->messages()->first()] , 405);
         }
-        
+
     }
 
     /**
@@ -469,7 +471,7 @@ class userController extends Controller
      */
     public function changeBirthday(Request $request)
     {
-        
+
         $validation = array("newBirthday" => "required|date|after:-" . $this->youngerThan . "years|before:-" . $this->olderThan . "years");
         $messages       = array(
                                     "newBirthday.before" => "You must be older than ". $this->olderThan,
@@ -517,7 +519,7 @@ class userController extends Controller
         {
             return response()->json(["errors" => $Valid->messages()->first()],405);
         }
-        
+
 
     }
 
@@ -589,7 +591,7 @@ class userController extends Controller
      */
     public function changeImage(Request $request)
     {
-        $Validatoin = array 
+        $Validatoin = array
                             (
                                 "image" => "required|image"
                             );
@@ -609,7 +611,10 @@ class userController extends Controller
             $OldUrl = $User->image_link;
             $User->image_link = $URL;
             $User->save();
-            Storage::disk("public")->delete($this->PrivateUrl . $this->AvatarDirectory . $OldUrl);
+            if($OldUrl != "default.jpg")
+            {
+                Storage::disk("public")->delete($this->PrivateUrl . $this->AvatarDirectory . $OldUrl);
+            }
             return response()->json(["message" => "You have changed your profile picture"]);
         }
         else
@@ -637,22 +642,25 @@ class userController extends Controller
         if(Auth::attempt(["id" => $this->ID , "password" => $request["password"]]))
         {
             auth()->logout();
-            $User = User::find($this->ID); 
-            storage::disk("public")->delete($this->PrivateUrl . $this->AvatarDirectory .$User->image_link);
+            $User = User::find($this->ID);
+            if($User->image_link != "default.jpg")
+            {
+                storage::disk("public")->delete($this->PrivateUrl . $this->AvatarDirectory .$User->image_link);
+            }
             $User->delete();
             return response()->json(["message" => "You have deleted your account"],200);
         }
         else
         {
             return response()->json(["errors" => "The password is invalid."],405);
-        }  
+        }
     }
 
 
 
 
     /**
-     * forgotPassword
+     * forgot Password
      * @bodyParam email string required .
      * @response 200 {
      * "message":"Now , You can go to You email to reset the password"
@@ -665,7 +673,7 @@ class userController extends Controller
     {
 
         $Validation = array (
-                                "email" => "required|exists:users,email"
+                                "email" => "required|email|exists:users,email"
                             );
 
         $Messages = array   (
@@ -678,7 +686,7 @@ class userController extends Controller
             $User = User::where("email" , $request["email"])->first();
             $User->forgot_password_token = $token;
             $User->save();
-            $Url = asset($this->ForgotPasswordRoute . $token);
+            $Url = asset($this->ForgotPasswordRouteFront . $token . "&type=forgot");
             Mail::to($request["email"])->send(new ForgotPassword($Url));
             return response()->json(["message" => "Now , you can go to " .$request["email"]. " to reset your password"],200);
         }
@@ -693,13 +701,13 @@ class userController extends Controller
 
 
     /**
-     * check token
+     * check token forgot password
      * @bodyParam token string required .
      * @response 200 {
-     * "error":"valid token"
+     * "userId": ""
      *}
      * @response 405{
-     * "error": "Invalid token"
+     * "error": "This url is old , please try to reset your password again"
      *}
      */
     public function checkToken(Request $request)
@@ -765,13 +773,9 @@ class userController extends Controller
 
     /**
      * verify account
-     * @bodyParam email string required .
      * @authenticated
      * @response 200 {
-     * "message":"Now , You can go to You email to reset the password"
-     *}
-     * @response 405{
-     * "error": "The email is invalid"
+     * "message":"Now , You can go to your account to reset the password"
      *}
      */
     public function verify(Request $request)
@@ -780,7 +784,7 @@ class userController extends Controller
         $User = User::find($this->ID);
         $User->verified_token = $token;
         $User->save();
-        $Url = asset($this->VerifyRoute . $token);
+        $Url = asset($this->ForgotPasswordRouteFront . $token . "&type=verify");
         Mail::to($User->email)->send(new VerifiedAccount($Url));
         return response()->json(["message" => "Now , you can go to " .$User->email. " to verify your account"],200);
     }
@@ -790,30 +794,43 @@ class userController extends Controller
 
 
     /**
-     * check token
+     * check token verify
      * @bodyParam token string required .
+     * @authenticated
      * @response 200 {
-     * "error":"valid token"
+     * "error":"You have verified your account"
      *}
      * @response 405{
-     * "error": "Invalid token"
+     * "error": "This url is old , please try to verify your account again"
      *}
      */
     public function checkTokenVerify(Request $request)
     {
-        $token = Crypt::decryptString($request["token"]);
-        if(time() - $token < $this->TokenLife)
+        $Validation = array (
+                                "token" => "required|exists:users,verified_token"
+                            );
+        $Validate = validator::make($request->all() , $Validation);
+        if(!$Validate->fails())
         {
-            $User = User::where("verify_token" , $request["token"])->first();
-            $User->verify_token = null;
-            $User->verified = 1;
-            $User->save();
-            return response()->json(["message" => "You have verified your account"],200);
+            $token = Crypt::decryptString($request["token"]);
+            if(time() - $token < $this->TokenLife)
+            {
+                $User = User::where("verified_token" , $request["token"])->first();
+                $User->verified_token = null;
+                $User->verified = 1;
+                $User->save();
+                return response()->json(["message" => "You have verified your account"],200);
+            }
+            else
+            {
+                return response()->json(["error" => "This url is old , please try to verify your account again"],405);
+            }
         }
         else
         {
             return response()->json(["error" => "This url is old , please try to verify your account again"],405);
         }
+
     }
 
 
@@ -828,25 +845,25 @@ class userController extends Controller
      *	}
      *}
      */
-    public function getUser()
+    /*public function getUser()
     {
         // to do
-    }
+    }*/
     /**
      * @group [User].show Profile
-     * 
+     *
      * showProfile function
-     * 
-     * checking the request given paramaters if user_id exists 
-     * 
+     *
+     * checking the request given paramaters if user_id exists
+     *
      * it returns his profile-details
-     * 
+     *
      * other-wise it returns authenticated user`s profile from database user table .
-     * 
+     *
      * @bodyParam id int optional this parameter to show the info of the other user (default authenticated user) .
      *
      * @authenticated
-     * 
+     *
      * @response 200
      *  {
      *     "id": 1,
@@ -871,7 +888,8 @@ class userController extends Controller
      *     "books_count": null,
      *     "birthday": null,
      *     "created_at": null,
-     *     "updated_at": null
+     *     "updated_at": null,
+	 *     "is_followed":1
      * }
      */
 
@@ -887,7 +905,7 @@ class userController extends Controller
 
         /**
          * Query finding user data
-         */      
+         */
 
         $data = User::where('id',$userId)->get()[0];
         if( $request->has(['id']) && ( $request->id != $this->ID ) )
@@ -902,10 +920,180 @@ class userController extends Controller
     }
 
 
+/**
+     * @group [User].Search by name
+     *
+     * searchByName function
+     *
+     *
+     * @bodyParam name string required name of person you`r looking for .
+     * it filters users with names that like the given name paramater
+     * E.G searching by name="o" it reponses all users have name contains 'o'.
+     * @authenticated
+     *
+     * @response 200
+     *  {
+     *    "users": [
+     *        {
+     *            "id": 4,
+     *            "username": "Nour",
+     *            "name": "Nour",
+     *            "image_link": "http://127.0.0.1:8000/storage/avatars/default.jpg",
+     *            "gender": "female",
+     *            "country": "Egypt",
+     *            "city": "Cairo",
+     *            "followers_count": 0,
+     *            "following_count": 0
+     *        },
+     *        {
+     *            "id": 7,
+     *            "username": "Mido",
+     *            "name": "Mohamed",
+     *            "image_link": "http://127.0.0.1:8000/storage/avatars/default.jpg",
+     *            "gender": "male",
+     *            "country": "Egypt",
+     *            "city": "Cairo",
+     *            "followers_count": 0,
+     *            "following_count": 0
+     *        }
+     *    ]
+     *}
+     **/
+    public function searchByName(Request $request)
+    {
+        $name = $request->has(['name']) ? $request->name : abort(404);
+        $emptyStr = str_replace(' ', '', $name);
+        if (empty($emptyStr) == 1) abort(404);
+
+        $query = "select id , username , name ,image_link , gender , country ,
+                    city ,followers_count ,following_count from users where name like "."'%".$name."%'" ;
+        $data = DB::select($query);
+        $i = 0;
+        while ($i < sizeof($data)) {
+                $data[$i]->image_link = $this->GetUrl() . "/" . $data[$i]->image_link;
+            $i++;
+        }
+
+        return response()->json(['users' => $data,], 200);
+
+    }
+    /**
+     * @group [User].Search by username
+     *
+     * searchByName function
+     *
+     *
+     * @bodyParam username string required username of person you`r looking for .
+     * it filters users with usernames that like the given username paramater
+     * E.G searching by username="o" it reponses all users have name contains 'o'.
+     * @authenticated
+     *
+     * @response 200
+     *  {
+     *    "users": [
+     *        {
+     *            "id": 4,
+     *            "username": "Nour",
+     *            "name": "Nour",
+     *            "image_link": "http://127.0.0.1:8000/storage/avatars/default.jpg",
+     *            "gender": "female",
+     *            "country": "Egypt",
+     *            "city": "Cairo",
+     *            "followers_count": 0,
+     *            "following_count": 0
+     *        },
+     *        {
+     *            "id": 6,
+     *            "username": "LoLo",
+     *            "name": "TheLeader",
+     *            "image_link": "http://127.0.0.1:8000/storage/avatars/default.jpg",
+     *            "gender": "male",
+     *            "country": "Egypt",
+     *            "city": "Cairo",
+     *            "followers_count": 0,
+     *            "following_count": 0
+     *        },
+     *        {
+     *            "id": 7,
+     *            "username": "Mido",
+     *            "name": "Mohamed",
+     *            "image_link": "http://127.0.0.1:8000/storage/avatars/default.jpg",
+     *            "gender": "male",
+     *            "country": "Egypt",
+     *            "city": "Cairo",
+     *            "followers_count": 0,
+     *            "following_count": 0
+     *        }
+     *    ]
+     *}
+     **/
+    public function searchByUsername(Request $request)
+    {
+        $username = $request->has(['username']) ? $request->username : abort(404);
+        $emptyStr = str_replace(' ', '', $username);
+        if (empty($emptyStr) == 1) abort(404);
+
+        $query = "select id , username , name ,image_link , gender , country ,
+                    city ,followers_count ,following_count from users where username like " . "'%" . $username . "%'";
+        $data = DB::select($query);
+        $i = 0;
+        while ($i < sizeof($data)) {
+            $data[$i]->image_link = $this->GetUrl() . "/" . $data[$i]->image_link;
+            $i++;
+        }
+        return response()->json(['users' => $data,], 200);
+
+    }
+    /**
+     * @group [User].Search by name or username
+     *
+     * searchByName function
+     *
+     *
+     * @bodyParam name string required name/username of person you`r looking for .
+     * it filters users with names that like the given name paramater
+     * E.G searching by name="mo" it reponses all users have name or usernames contains 'mo'.
+     * @authenticated
+     *
+     * @response 200
+     *{
+     *    "users": [
+     *        {
+     *            "id": 7,
+     *            "username": "Mido",
+     *            "name": "Mohamed",
+     *            "image_link": "http://127.0.0.1:8000/storage/avatars/default.jpg",
+     *            "gender": "male",
+     *            "country": "Egypt",
+     *            "city": "Cairo",
+     *            "followers_count": 0,
+     *            "following_count": 0
+     *        }
+     *    ]
+     *}
+     **/
+    public function searchByNameOrUsername(Request $request)
+    {
+        $name = $request->has(['name']) ? $request->name : abort(404);
+        $emptyStr = str_replace(' ', '', $name);
+        if (empty($emptyStr) == 1) abort(404);
+
+        $query = "select id , username , name ,image_link , gender , country ,
+                    city ,followers_count ,following_count from users
+                    where name like " . "'%" . $name . "%' or username like "."'%".$name."%' " ;
+        $data = DB::select($query);
+        $i = 0;
+        while ($i < sizeof($data)) {
+            $data[$i]->image_link = $this->GetUrl() . "/" . $data[$i]->image_link;
+            $i++;
+        }
+        return response()->json(['users' => $data,], 200);
+    }
+
+
     public function test(Request $request)
     {
-        Mail::to("mrehab745@gmail.com")->send(new testmail());
-        return response()->json(["message" => "Good you have sent your message"],200);
+        echo phpinfo();
     }
 
 }
