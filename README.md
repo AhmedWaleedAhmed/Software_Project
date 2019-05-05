@@ -3,7 +3,7 @@ CMP 203 Software Engineering Course`s Project [ Backend repository ]
 
 ### How to get start ?
 ``` 
-git clone https://github.com/mohamed-mokhtar/goodreads-api/
+git clone https://github.com/AhmedWaleedAhmed/Software_Project.git
 ``` 
 
 ### How to run this appliction in your machine 
@@ -21,7 +21,7 @@ cp .env.example .env #for linux
 ```
 git add . ; or ur updated files [ dot for all files ]
 git commit -m "your comment here"
-git remote add origin https://github.com/mohamed-mokhtar/goodreads-api
+git remote add origin https://github.com/AhmedWaleedAhmed/Software_Project.git
 git push -u origin master
 ```
 #### Incase you dont have the latest pushed version you `ll need to
